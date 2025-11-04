@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal, ROUND_HALF_UP
-from typing import List, Sequence
+from typing import Dict, List, Sequence
 
 from django.db.models import Prefetch
 from django.utils import timezone
@@ -96,6 +97,27 @@ def _compute_rotor_stats(bus: Bus, measurements: Sequence[RotorMeasurement]) -> 
     )
 
 
+def _group_measurements_by_position(
+    bus: Bus,
+) -> Dict[str, List[RotorMeasurement]]:
+    grouped: Dict[str, List[RotorMeasurement]] = defaultdict(list)
+    for measurement in bus.rotor_measurements.all():
+        grouped[measurement.position].append(measurement)
+    return grouped
+
+
+def compute_rotor_details(bus: Bus) -> List[RotorStats]:
+    grouped_measurements = _group_measurements_by_position(bus)
+    rotor_details: List[RotorStats] = []
+    for position in get_rotor_positions(bus):
+        position_measurements = grouped_measurements.get(position, [])
+        position_measurements.sort(key=lambda m: (m.measurement_date, m.id))
+        stats = _compute_rotor_stats(bus, position_measurements)
+        stats.position = position
+        rotor_details.append(stats)
+    return rotor_details
+
+
 def build_fleet_snapshot() -> List[BusMaintenanceSnapshot]:
     buses = (
         Bus.objects.prefetch_related(
@@ -112,19 +134,42 @@ def build_fleet_snapshot() -> List[BusMaintenanceSnapshot]:
 
     fleet: List[BusMaintenanceSnapshot] = []
     for bus in buses:
-        rotor_details: List[RotorStats] = []
-        alerts: List[str] = []
-        for position in get_rotor_positions(bus):
-            position_measurements = [
-                m for m in bus.rotor_measurements.all() if m.position == position
-            ]
-            stats = _compute_rotor_stats(bus, position_measurements)
-            stats.position = position
-            rotor_details.append(stats)
-            if stats.alert:
-                alerts.append(f"{position} rotor due soon")
-        fleet.append(BusMaintenanceSnapshot(bus=bus, rotor_details=rotor_details, alerts=alerts))
+        rotor_details = compute_rotor_details(bus)
+        alerts = [
+            f"{detail.position} rotor due soon"
+            for detail in rotor_details
+            if detail.alert
+        ]
+        fleet.append(
+            BusMaintenanceSnapshot(bus=bus, rotor_details=rotor_details, alerts=alerts)
+        )
     return fleet
+
+
+def get_lowest_rotor_summary(bus: Bus) -> Dict[str, object]:
+    rotor_details = compute_rotor_details(bus)
+    measured_rotors = [
+        detail for detail in rotor_details if detail.current_thickness is not None
+    ]
+
+    if not measured_rotors:
+        return {
+            "position": None,
+            "status_label": "Needs data",
+            "status_class": "status-missing",
+            "current_thickness": None,
+        }
+
+    lowest = min(measured_rotors, key=lambda detail: detail.current_thickness)
+    status_label = "Attention" if lowest.alert else "Healthy"
+    status_class = "status-alert" if lowest.alert else "status-ok"
+
+    return {
+        "position": lowest.position,
+        "status_label": status_label,
+        "status_class": status_class,
+        "current_thickness": lowest.current_thickness,
+    }
 
 
 def initialize_rotors(bus: Bus, measurement_date: date | None = None) -> None:
