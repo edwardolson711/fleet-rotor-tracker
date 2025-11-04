@@ -1,0 +1,57 @@
+{% extends 'base.html' %}
+{% block title %}Fleet Overview | Fleet Rotor Tracker{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div class="context">
+        <h1>Fleet overview</h1>
+        <p>Monitor fleet readiness at a glance. Every bus is organized in a structured table so it is easier to scan, filter, and identify follow-up actions.</p>
+    </div>
+    <div class="cta">
+        <a href="{% url 'maintenance' %}" class="button">Open maintenance board</a>
+    </div>
+</section>
+
+<div class="table-wrapper">
+    <table class="data-table" role="grid">
+        <thead>
+            <tr>
+                <th scope="col">Bus</th>
+                <th scope="col">Type</th>
+                <th scope="col">Location</th>
+                <th scope="col">Current mileage</th>
+                <th scope="col">Rotor positions</th>
+                <th scope="col">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bus in buses %}
+                <tr id="bus-{{ bus.id }}">
+                    <td data-label="Bus">
+                        <strong>{{ bus.bus_number }}</strong>
+                    </td>
+                    <td data-label="Type">{{ bus.bus_type }}</td>
+                    <td data-label="Location">{{ bus.location }}</td>
+                    <td data-label="Current mileage">{{ bus.current_mileage }}</td>
+                    <td data-label="Rotor positions">
+                        <div class="chip-list">
+                            {% for position in bus.rotor_positions %}
+                                <span class="chip">{{ position }}</span>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td data-label="Actions" class="table-actions">
+                        <a class="button secondary" href="{% url 'maintenance' %}#bus-{{ bus.id }}">Maintenance</a>
+                        <a class="button" href="{% url 'add_rotors' bus.id %}">Add measurements</a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6" style="text-align:center; padding: 2rem;">
+                        No buses registered yet. Add a bus to start tracking its rotors.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Fleet Rotor Tracker{% endblock %}</title>
+    <style>
+        :root {
+            color-scheme: light dark;
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 45%, #334155 100%);
+            --surface-color: rgba(15, 23, 42, 0.65);
+            --card-color: rgba(15, 23, 42, 0.75);
+            --accent: #38bdf8;
+            --accent-strong: #0ea5e9;
+            --success: #22c55e;
+            --warning: #f97316;
+            --danger: #ef4444;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5f5;
+            --border-color: rgba(148, 163, 184, 0.2);
+            --shadow-color: rgba(15, 23, 42, 0.6);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            backdrop-filter: blur(14px);
+            background: rgba(15, 23, 42, 0.55);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.25rem 2rem;
+            box-shadow: 0 16px 30px -22px var(--shadow-color);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .brand {
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            font-size: 1rem;
+            color: var(--text-secondary);
+        }
+
+        nav {
+            display: flex;
+            gap: 1rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        nav a {
+            color: var(--text-primary);
+            text-decoration: none;
+            padding: 0.55rem 1.1rem;
+            border-radius: 999px;
+            font-weight: 500;
+            background: rgba(148, 163, 184, 0.08);
+            transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        nav a:hover,
+        nav a:focus {
+            background: rgba(56, 189, 248, 0.25);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px -18px var(--shadow-color);
+        }
+
+        main {
+            width: min(1200px, 92vw);
+            margin: 3rem auto 4rem;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 32px 50px -26px var(--shadow-color);
+            padding: 2.75rem clamp(1.5rem, 2vw, 3rem);
+        }
+
+        h1, h2, h3 {
+            margin: 0;
+            line-height: 1.15;
+            font-weight: 700;
+        }
+
+        .page-heading {
+            display: flex;
+            justify-content: space-between;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 2.5rem;
+        }
+
+        .page-heading .context {
+            max-width: 640px;
+        }
+
+        .page-heading p {
+            margin: 0.75rem 0 0;
+            color: var(--text-secondary);
+            font-size: 1.05rem;
+        }
+
+        .button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.65rem 1.25rem;
+            border-radius: 12px;
+            border: none;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-decoration: none;
+            color: #0f172a;
+            background: var(--accent);
+            box-shadow: 0 12px 24px -18px var(--shadow-color);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .button:hover,
+        .button:focus {
+            background: var(--accent-strong);
+            transform: translateY(-1px);
+            box-shadow: 0 18px 32px -20px var(--shadow-color);
+        }
+
+        .button.secondary {
+            background: transparent;
+            color: var(--text-primary);
+            border: 1px solid rgba(148, 163, 184, 0.35);
+        }
+
+        .button.secondary:hover,
+        .button.secondary:focus {
+            border-color: rgba(56, 189, 248, 0.75);
+            background: rgba(56, 189, 248, 0.15);
+        }
+
+        .table-wrapper {
+            overflow: hidden;
+            border-radius: 18px;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(15, 23, 42, 0.55);
+        }
+
+        thead {
+            background: rgba(148, 163, 184, 0.12);
+        }
+
+        th, td {
+            padding: 1.1rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+            vertical-align: top;
+        }
+
+        th {
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            color: var(--text-secondary);
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        .chip-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+        }
+
+        .chip {
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.18);
+            font-size: 0.82rem;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+
+        .bus-info {
+            display: grid;
+            gap: 0.25rem;
+        }
+
+        .bus-info p {
+            margin: 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .table-actions,
+        .bus-actions {
+            display: grid;
+            gap: 0.65rem;
+        }
+
+        .table-actions .button,
+        .bus-actions .button {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.35rem 0.65rem;
+            border-radius: 999px;
+            font-weight: 600;
+            font-size: 0.82rem;
+            letter-spacing: 0.02em;
+        }
+
+        .status-ok {
+            background: rgba(34, 197, 94, 0.18);
+            color: #4ade80;
+        }
+
+        .status-alert {
+            background: rgba(249, 115, 22, 0.18);
+            color: #fb923c;
+        }
+
+        .status-missing {
+            background: rgba(239, 68, 68, 0.18);
+            color: #fca5a5;
+        }
+
+        .alert-list {
+            margin: 0.85rem 0 0;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 0.35rem;
+        }
+
+        .alert-pill {
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            background: rgba(239, 68, 68, 0.15);
+            color: #fecaca;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+        }
+
+        .alert-pill::before {
+            content: "\26A0";
+        }
+
+        .message-list {
+            margin: 0 0 2rem;
+            padding: 0;
+            list-style: none;
+            display: grid;
+            gap: 0.75rem;
+        }
+
+        .message {
+            padding: 0.85rem 1.1rem;
+            border-radius: 12px;
+            background: rgba(148, 163, 184, 0.14);
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            font-weight: 500;
+        }
+
+        .message.success {
+            background: rgba(34, 197, 94, 0.18);
+            border-color: rgba(74, 222, 128, 0.4);
+        }
+
+        .message.error {
+            background: rgba(239, 68, 68, 0.18);
+            border-color: rgba(248, 113, 113, 0.45);
+        }
+
+        .message.warning {
+            background: rgba(250, 204, 21, 0.18);
+            border-color: rgba(253, 224, 71, 0.4);
+        }
+
+        form.inline {
+            display: inline;
+        }
+
+        .card-grid {
+            display: grid;
+            gap: 1.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        }
+
+        .input-card {
+            background: var(--card-color);
+            border-radius: 18px;
+            padding: 1.35rem;
+            border: 1px solid var(--border-color);
+            display: grid;
+            gap: 0.65rem;
+            box-shadow: 0 16px 30px -28px var(--shadow-color);
+        }
+
+        label {
+            font-size: 0.85rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        input, select {
+            background: rgba(15, 23, 42, 0.45);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: 10px;
+            padding: 0.6rem 0.75rem;
+            font-size: 1rem;
+            color: var(--text-primary);
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: rgba(56, 189, 248, 0.65);
+            box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+        }
+
+        .form-actions {
+            margin-top: 2rem;
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        footer {
+            margin-top: auto;
+            padding: 2rem 0 3rem;
+            text-align: center;
+            color: rgba(203, 213, 225, 0.75);
+            font-size: 0.85rem;
+        }
+
+        @media (max-width: 760px) {
+            main {
+                padding: 2.25rem 1.25rem;
+            }
+
+            th, td {
+                padding: 0.9rem 0.75rem;
+            }
+
+            .page-heading {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            nav {
+                margin-top: 1rem;
+            }
+        }
+
+        {% block extra_styles %}{% endblock %}
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand">Fleet Rotor Tracker</div>
+        <nav>
+            <a href="{% url 'home' %}">Dashboard</a>
+            <a href="{% url 'maintenance' %}">Maintenance</a>
+        </nav>
+    </header>
+    <main>
+        {% if messages %}
+            <ul class="message-list">
+                {% for message in messages %}
+                    <li class="message {{ message.tags }}">{{ message }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+    <footer>
+        &copy; {% now "Y" %} Fleet Rotor Tracker. Monitor rotor health with confidence.
+    </footer>
+</body>
+</html>

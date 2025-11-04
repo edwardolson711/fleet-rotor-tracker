@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load dict_filters %}
+{% block title %}Update Rotor Measurements | Fleet Rotor Tracker{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div class="context">
+        <h1>Update rotor measurements</h1>
+        <p>
+            {{ bus.bus_number }} &mdash; {{ bus.bus_type }} stationed at {{ bus.location }}.
+            Enter the latest thickness for each position. Leave a field blank to reuse the last recorded value.
+        </p>
+    </div>
+    <div class="cta">
+        <a class="button secondary" href="{% url 'maintenance' %}#bus-{{ bus.id }}">Back to maintenance</a>
+    </div>
+</section>
+
+<form method="post">
+    {% csrf_token %}
+    <div class="card-grid">
+        <div class="input-card">
+            <label for="measurement_date">Measurement date</label>
+            <input type="date" id="measurement_date" name="measurement_date" value="{{ today|date:'Y-m-d' }}" required>
+        </div>
+        <div class="input-card">
+            <label for="mileage">Mileage at measurement</label>
+            <input type="number" id="mileage" name="mileage" value="{{ bus.current_mileage }}" min="0" step="1">
+        </div>
+    </div>
+
+    <div class="card-grid" style="margin-top: 2rem;">
+        {% for position in positions %}
+            <div class="input-card">
+                <div>
+                    <label for="id_{{ position|rotor_field }}">{{ position }}</label>
+                    {% if last_measurements|get_item:position %}
+                        <p style="margin:0; color: var(--text-secondary); font-size: 0.85rem;">
+                            Last recorded thickness: {{ last_measurements|get_item:position|floatformat:3 }} mm
+                        </p>
+                    {% endif %}
+                </div>
+                <input
+                    type="number"
+                    id="id_{{ position|rotor_field }}"
+                    name="thickness_{{ position|rotor_field }}"
+                    step="0.001"
+                    min="0"
+                    placeholder="e.g. 44.750"
+                >
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="button">Save measurements</button>
+        <a class="button secondary" href="{% url 'maintenance' %}#bus-{{ bus.id }}">Cancel</a>
+    </div>
+</form>
+{% endblock %}

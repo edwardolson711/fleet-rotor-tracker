@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+{% block title %}Maintenance Board | Fleet Rotor Tracker{% endblock %}
+{% block content %}
+<section class="page-heading">
+    <div class="context">
+        <h1>Maintenance board</h1>
+        <p>Stay ahead of rotor replacements. The data table surfaces every rotor position, its latest measurement, and predictive remaining life so you can prioritize work orders quickly.</p>
+    </div>
+</section>
+
+<div class="table-wrapper">
+    <table class="data-table" role="grid">
+        <thead>
+            <tr>
+                <th scope="col">Bus</th>
+                <th scope="col">Rotor position</th>
+                <th scope="col">Current thickness (mm)</th>
+                <th scope="col">Miles left</th>
+                <th scope="col">Days left</th>
+                <th scope="col">Status</th>
+                <th scope="col">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bus_data in fleet_data %}
+                {% with rotor_count=bus_data.rotor_details|length %}
+                    {% if rotor_count == 0 %}
+                        <tr id="bus-{{ bus_data.bus.id }}">
+                            <td data-label="Bus">
+                                <div class="bus-info">
+                                    <strong>{{ bus_data.bus.bus_number }}</strong>
+                                    <p>{{ bus_data.bus.bus_type }} &bull; {{ bus_data.bus.location }}</p>
+                                    <p>Current mileage: {{ bus_data.bus.current_mileage }}</p>
+                                </div>
+                            </td>
+                            <td colspan="5" style="text-align:center;">No rotor measurements yet.</td>
+                            <td class="table-actions">
+                                <a class="button" href="{% url 'add_rotors' bus_data.bus.id %}">Add measurements</a>
+                            </td>
+                        </tr>
+                    {% else %}
+                        {% for detail in bus_data.rotor_details %}
+                            <tr id="bus-{{ bus_data.bus.id }}" class="bus-row">
+                                {% if forloop.first %}
+                                    <td data-label="Bus" rowspan="{{ rotor_count }}">
+                                        <div class="bus-info">
+                                            <strong>{{ bus_data.bus.bus_number }}</strong>
+                                            <p>{{ bus_data.bus.bus_type }} &bull; {{ bus_data.bus.location }}</p>
+                                            <p>Current mileage: {{ bus_data.bus.current_mileage }}</p>
+                                            {% if bus_data.alerts %}
+                                                <div class="alert-list">
+                                                    {% for alert in bus_data.alerts %}
+                                                        <span class="alert-pill">{{ alert }}</span>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                {% endif %}
+                                <td data-label="Rotor position">{{ detail.position }}</td>
+                                <td data-label="Current thickness">
+                                    {% if detail.current_thickness %}
+                                        {{ detail.current_thickness|floatformat:3 }}
+                                    {% else %}
+                                        &mdash;
+                                    {% endif %}
+                                </td>
+                                <td data-label="Miles left">
+                                    {% if detail.miles_left is not None %}
+                                        {{ detail.miles_left }}
+                                    {% else %}
+                                        &mdash;
+                                    {% endif %}
+                                </td>
+                                <td data-label="Days left">
+                                    {% if detail.days_left is not None %}
+                                        {{ detail.days_left }}
+                                    {% else %}
+                                        &mdash;
+                                    {% endif %}
+                                </td>
+                                <td data-label="Status">
+                                    {% if not detail.current_thickness %}
+                                        <span class="status-badge status-missing">Needs data</span>
+                                    {% elif detail.alert %}
+                                        <span class="status-badge status-alert">Attention</span>
+                                    {% else %}
+                                        <span class="status-badge status-ok">Healthy</span>
+                                    {% endif %}
+                                </td>
+                                {% if forloop.first %}
+                                    <td data-label="Actions" rowspan="{{ rotor_count }}" class="table-actions">
+                                        <div class="bus-actions">
+                                            <a class="button" href="{% url 'add_rotors' bus_data.bus.id %}">Add measurements</a>
+                                            <form class="inline" method="post" action="{% url 'new_rotors' %}">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="bus_id" value="{{ bus_data.bus.id }}">
+                                                <button type="submit" class="button secondary">Initialize rotors</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                {% endif %}
+                            </tr>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+            {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align:center; padding: 2rem;">No buses to display.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
