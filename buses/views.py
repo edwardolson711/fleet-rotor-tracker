@@ -1,21 +1,37 @@
 from __future__ import annotations
 
-from collections import defaultdict
 from datetime import date
 from decimal import Decimal
 from typing import Dict
 
+from django.db.models import Prefetch
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 
 from .models import Bus, RotorMeasurement
-from .services import build_fleet_snapshot, get_rotor_positions, initialize_rotors
+from .services import (
+    build_fleet_snapshot,
+    get_lowest_rotor_summary,
+    get_rotor_positions,
+    initialize_rotors,
+)
 
 
 def home(request: HttpRequest) -> HttpResponse:
-    buses = Bus.objects.all().order_by("bus_number")
+    buses = (
+        Bus.objects.prefetch_related(
+            Prefetch(
+                "rotor_measurements",
+                queryset=RotorMeasurement.objects.order_by(
+                    "position", "measurement_date", "id"
+                ),
+            )
+        )
+        .all()
+        .order_by("bus_number")
+    )
     return render(
         request,
         "home.html",
@@ -27,7 +43,7 @@ def home(request: HttpRequest) -> HttpResponse:
                     "bus_type": bus.bus_type,
                     "location": bus.location,
                     "current_mileage": bus.current_mileage,
-                    "rotor_positions": get_rotor_positions(bus),
+                    "lowest_rotor": get_lowest_rotor_summary(bus),
                 }
                 for bus in buses
             ]

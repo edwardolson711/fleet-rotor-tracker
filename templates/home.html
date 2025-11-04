@@ -19,7 +19,7 @@
                 <th scope="col">Type</th>
                 <th scope="col">Location</th>
                 <th scope="col">Current mileage</th>
-                <th scope="col">Rotor positions</th>
+                <th scope="col">Lowest rotor status</th>
                 <th scope="col">Actions</th>
             </tr>
         </thead>
@@ -32,15 +32,18 @@
                     <td data-label="Type">{{ bus.bus_type }}</td>
                     <td data-label="Location">{{ bus.location }}</td>
                     <td data-label="Current mileage">{{ bus.current_mileage }}</td>
-                    <td data-label="Rotor positions">
-                        <div class="chip-list">
-                            {% for position in bus.rotor_positions %}
-                                <span class="chip">{{ position }}</span>
-                            {% endfor %}
+                    <td data-label="Lowest rotor status">
+                        <div class="lowest-rotor-status">
+                            <span class="status-badge {{ bus.lowest_rotor.status_class }}">{{ bus.lowest_rotor.status_label }}</span>
+                            {% if bus.lowest_rotor.position %}
+                                <span class="status-context">{{ bus.lowest_rotor.position }}</span>
+                            {% endif %}
+                            {% if bus.lowest_rotor.current_thickness %}
+                                <span class="status-metric">{{ bus.lowest_rotor.current_thickness|floatformat:3 }} mm</span>
+                            {% endif %}
                         </div>
                     </td>
                     <td data-label="Actions" class="table-actions">
-                        <a class="button secondary" href="{% url 'maintenance' %}#bus-{{ bus.id }}">Maintenance</a>
                         <a class="button" href="{% url 'add_rotors' bus.id %}">Add measurements</a>
                     </td>
                 </tr>
