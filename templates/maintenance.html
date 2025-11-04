@@ -44,7 +44,15 @@
                                 {% if forloop.first %}
                                     <td data-label="Bus" rowspan="{{ rotor_count }}">
                                         <div class="bus-info">
-                                            <strong>{{ bus_data.bus.bus_number }}</strong>
+                                            <button
+                                                type="button"
+                                                class="bus-number-trigger"
+                                                data-bus-id="{{ bus_data.bus.id }}"
+                                                aria-haspopup="dialog"
+                                                aria-controls="rotor-life-modal"
+                                            >
+                                                {{ bus_data.bus.bus_number }}
+                                            </button>
                                             <p>{{ bus_data.bus.bus_type }} &bull; {{ bus_data.bus.location }}</p>
                                             <p>Current mileage: {{ bus_data.bus.current_mileage }}</p>
                                             {% if bus_data.alerts %}
@@ -54,6 +62,16 @@
                                                     {% endfor %}
                                                 </div>
                                             {% endif %}
+                                            <span class="rotor-life-dataset" data-bus-id="{{ bus_data.bus.id }}" hidden>
+                                                {% for detail in bus_data.rotor_details %}
+                                                    <span
+                                                        data-position="{{ detail.position }}"
+                                                        data-service-life="{{ detail.service_life_miles|default_if_none:'' }}"
+                                                        data-start-mileage="{{ detail.starting_mileage|default_if_none:'' }}"
+                                                        data-replacement-mileage="{{ detail.replacement_mileage|default_if_none:'' }}"
+                                                    ></span>
+                                                {% endfor %}
+                                            </span>
                                         </div>
                                     </td>
                                 {% endif %}
@@ -112,4 +130,233 @@
         </tbody>
     </table>
 </div>
+
+<div id="rotor-life-modal" class="rotor-life-modal" hidden role="dialog" aria-modal="true" aria-labelledby="rotor-life-title">
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-content" role="document">
+        <header class="modal-header">
+            <h2 id="rotor-life-title">Rotor lifespan &mdash; <span class="bus-label"></span></h2>
+            <button type="button" class="modal-close" data-close-modal aria-label="Close">&times;</button>
+        </header>
+        <div class="modal-body">
+            <p class="modal-subtitle">Miles each rotor is expected to cover from installation to replacement.</p>
+            <ul class="rotor-life-list"></ul>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bus-number-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        border: none;
+        background: none;
+        color: inherit;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        padding: 0;
+        text-decoration: underline;
+        text-decoration-color: rgba(148, 197, 255, 0.55);
+        text-decoration-thickness: 2px;
+        text-underline-offset: 0.18em;
+    }
+
+    .bus-number-trigger:focus-visible,
+    .bus-number-trigger:hover {
+        text-decoration-color: var(--accent);
+    }
+
+    .rotor-life-modal[hidden] {
+        display: none;
+    }
+
+    .rotor-life-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .modal-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(7, 15, 32, 0.75);
+        backdrop-filter: blur(4px);
+    }
+
+    .modal-content {
+        position: relative;
+        background: rgba(33, 45, 70, 0.96);
+        border: 1px solid rgba(148, 197, 255, 0.35);
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 36px 68px -28px rgba(8, 12, 26, 0.85);
+        width: min(520px, 90vw);
+        max-height: 80vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .modal-header h2 {
+        font-size: 1.35rem;
+        margin: 0;
+    }
+
+    .modal-close {
+        border: none;
+        background: none;
+        color: inherit;
+        font-size: 2rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+
+    .modal-subtitle {
+        margin: 0;
+        color: rgba(223, 232, 255, 0.72);
+        font-size: 0.95rem;
+    }
+
+    .rotor-life-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .rotor-life-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        background: rgba(53, 71, 107, 0.65);
+        border: 1px solid rgba(148, 197, 255, 0.25);
+        border-radius: 14px;
+        padding: 0.9rem 1.1rem;
+    }
+
+    .rotor-life-item span:first-child {
+        font-weight: 600;
+    }
+
+    .rotor-life-item span:last-child {
+        font-size: 1.1rem;
+    }
+
+    @media (max-width: 600px) {
+        .modal-content {
+            padding: 1.5rem;
+        }
+
+        .rotor-life-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.35rem;
+        }
+    }
+</style>
+
+<script>
+    (function () {
+        const modal = document.getElementById('rotor-life-modal');
+        if (!modal) {
+            return;
+        }
+
+        const list = modal.querySelector('.rotor-life-list');
+        const busLabel = modal.querySelector('.bus-label');
+        const dataMap = new Map();
+
+        document.querySelectorAll('.rotor-life-dataset').forEach((container) => {
+            const busId = container.dataset.busId;
+            const details = Array.from(container.querySelectorAll('[data-position]')).map((node) => {
+                const serviceLife = node.dataset.serviceLife || '';
+                const startMileage = node.dataset.startMileage || '';
+                const replacementMileage = node.dataset.replacementMileage || '';
+                const parsedServiceLife = serviceLife !== '' ? Number(serviceLife) : null;
+                const parsedStart = startMileage !== '' ? Number(startMileage) : null;
+                const parsedReplacement = replacementMileage !== '' ? Number(replacementMileage) : null;
+                let lifeMiles = parsedServiceLife;
+                if (lifeMiles === null && parsedStart !== null && parsedReplacement !== null) {
+                    lifeMiles = parsedReplacement - parsedStart;
+                }
+                return {
+                    position: node.dataset.position,
+                    serviceLife: lifeMiles,
+                };
+            });
+            dataMap.set(busId, details);
+            container.remove();
+        });
+
+        function closeModal() {
+            modal.setAttribute('hidden', 'hidden');
+            modal.dispatchEvent(new CustomEvent('rotor-life:closed'));
+            document.body.style.removeProperty('overflow');
+        }
+
+        function openModal(busId, label) {
+            const records = dataMap.get(busId) || [];
+            busLabel.textContent = label;
+            list.innerHTML = '';
+
+            if (records.length === 0) {
+                const empty = document.createElement('li');
+                empty.className = 'rotor-life-item';
+                empty.innerHTML = '<span>No rotor data</span><span>&mdash;</span>';
+                list.appendChild(empty);
+            } else {
+                records.forEach((record) => {
+                    const li = document.createElement('li');
+                    li.className = 'rotor-life-item';
+                    const value = record.serviceLife !== null && !Number.isNaN(record.serviceLife)
+                        ? record.serviceLife.toLocaleString()
+                        : '—';
+                    li.innerHTML = `<span>${record.position}</span><span>${value}</span>`;
+                    list.appendChild(li);
+                });
+            }
+
+            modal.removeAttribute('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        modal.addEventListener('click', (event) => {
+            if (event.target instanceof HTMLElement && event.target.hasAttribute('data-close-modal')) {
+                closeModal();
+            }
+        });
+
+        modal.querySelectorAll('[data-close-modal]').forEach((btn) => {
+            btn.addEventListener('click', () => closeModal());
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !modal.hasAttribute('hidden')) {
+                closeModal();
+            }
+        });
+
+        document.querySelectorAll('.bus-number-trigger').forEach((button) => {
+            button.addEventListener('click', () => {
+                const busId = button.dataset.busId;
+                const label = button.textContent?.trim() || 'Bus';
+                openModal(busId, label);
+            });
+        });
+    })();
+</script>
 {% endblock %}
